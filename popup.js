@@ -17,68 +17,110 @@ function fix(str, encoding) {
   }
 }
 
-// Ask the page for the currently focused text
+// Get current selection + editable status
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   chrome.scripting.executeScript({
     target: { tabId: tabs[0].id },
-    func: () => {
-      const el = document.activeElement;
-      if (!el) return null;
-      return (el.value ?? el.textContent ?? "").substring(0, 1000); // limit size
-    }
+    func: getSelectedTextAndContext
   }, (results) => {
-    const text = results?.[0]?.result || "";
-    if (!text) {
-      document.getElementById("options").innerHTML = "<i>No text field focused</i>";
+    const data = results?.[0]?.result;
+    if (!data || !data.text) {
+      document.getElementById("options").innerHTML = "<i>No text selected or focused</i>";
       return;
     }
-    renderOptions(text);
+    renderOptions(data.text, data.isEditable);
   });
 });
 
-function renderOptions(originalText) {
-  const container = document.getElementById("options");
+function getSelectedTextAndContext() {
+  const selection = window.getSelection();
+  let text = selection.toString().trim();
+  let isEditable = false;
 
-  transformations.forEach((t, _) => {
-    const transformed = t.fn(originalText);
+  // If nothing selected, fall back to focused input/textarea
+  if (!text) {
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) {
+      text = el.value || el.textContent || "";
+      isEditable = true;
+    }
+  } else {
+    // Check if selection is inside an editable element
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    if (range) {
+      const container = range.commonAncestorContainer;
+      const node = container.nodeType === 1 ? container : container.parentNode;
+      isEditable = node.isContentEditable ||
+        (node.closest && (node.closest('input') || node.closest('textarea')));
+    }
+  }
+
+  return { text: text.substring(0, 2000), isEditable };
+}
+
+function renderOptions(originalText, isEditable) {
+  const container = document.getElementById("options");
+  container.innerHTML = ""; // clear
+
+  if (!isEditable) {
+    const hint = document.createElement("div");
+    hint.style.padding = "8px 12px";
+    hint.style.background = "#fff8e1";
+    hint.style.borderRadius = "6px";
+    hint.style.marginBottom = "10px";
+    hint.style.fontSize = "12px";
+    hint.textContent = "Preview only (text is not editable)";
+    container.appendChild(hint);
+  }
+
+  transformations.forEach((t) => {
+    const transformed = t.fn(originalText) || "(empty)";
     const div = document.createElement("div");
     div.className = "option";
+    if (!isEditable) div.style.opacity = "0.85";
+
     div.innerHTML = `
       <span class="label">${t.name}:</span>
-      <span class="preview">${escapeHtml(transformed) || "(empty)"}</span>
+      <span class="preview">${escapeHtml(transformed)}</span>
     `;
 
-    div.onclick = () => {
-      // Apply chosen transformation
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.scripting.executeScript({
-          target: { tabId: tabs[0].id },
-          func: applyText,
-          args: [transformed]
-        });
-      });
-      // Visual feedback
-      document.querySelectorAll(".option").forEach(d => d.classList.remove("selected"));
-      div.classList.add("selected");
-      setTimeout(() => window.close(), 300);
-    };
+    if (isEditable) {
+      div.style.cursor = "pointer";
+      div.title = "Click to replace text";
+      div.onclick = () => applyTransformation(transformed);
+    } else {
+      div.title = "Cannot replace non-editable text";
+    }
 
     container.appendChild(div);
   });
+}
+
+function applyTransformation(newText) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.scripting.executeScript({
+      target: { tabId: tabs[0].id },
+      func: replaceSelectedOrFocusedText,
+      args: [newText]
+    });
+    window.close();
+  });
+}
+
+function replaceSelectedOrFocusedText(newText) {
+  const el = document.activeElement;
+  const isInput = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+
+  if (isInput) {
+    if (el.value !== undefined) el.value = newText;
+    else el.textContent = newText;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
 }
 
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
-}
-
-function applyText(newText) {
-  const el = document.activeElement;
-  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) {
-    if (el.value !== undefined) el.value = newText;
-    else el.textContent = newText;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  }
 }
