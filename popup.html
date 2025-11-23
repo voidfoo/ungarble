@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 380px; font-family: system-ui, sans-serif; padding: 10px; }
+    h1 { font-size: 14px; margin: 0 0 10px; color: #333; }
+    .option {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      margin: 6px 0;
+      background: #f8f9fa;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .option:hover { background: #e8f0fe; }
+    .preview { flex: 1; font-family: monospace; overflow-wrap: anywhere; }
+    .label { margin: 0 10px; font-size: 11px; color: #555; width: 70px; text-align: right; }
+    .selected { background: #d0e8ff !important; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Click the correct version:</h1>
+  <div id="options"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
