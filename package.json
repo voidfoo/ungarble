@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "zip": "rimraf ungarble.zip && zip ungarble.zip background.js icon.jpg LICENSE manifest.json popup.html popup.js README.md"
+  }
+}
