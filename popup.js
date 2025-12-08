@@ -4,6 +4,8 @@ const transformations = [
   { name: "Fix UTF-8",      fn: s => fix(s, 'utf-8') },
   { name: "Fix GBK",        fn: s => fix(s, 'gbk') },
   { name: "Fix Big5",       fn: s => fix(s, 'big5') },
+  { name: "Fix Shift-Jis",       fn: s => fix(s, 'shift-js') },
+  { name: "Fix Euc-Kr",       fn: s => fix(s, 'enc-kr') },
   // Add more here easily!
 ];
 
