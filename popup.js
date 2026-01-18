@@ -21,18 +21,47 @@ function fix(str, encoding) {
 
 // Get current selection + editable status
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  if (chrome.runtime.lastError) {
+    showError("Unable to access current tab");
+    return;
+  }
+
+  if (!tabs || tabs.length === 0) {
+    showError("No active tab found");
+    return;
+  }
+
+  const tabId = tabs[0].id;
+
   chrome.scripting.executeScript({
-    target: { tabId: tabs[0].id },
+    target: { tabId: tabId },
     func: getSelectedTextAndContext
   }, (results) => {
-    const data = results?.[0]?.result;
+    if (chrome.runtime.lastError) {
+      showError("Cannot read page content (may be restricted)");
+      return;
+    }
+
+    if (!results || results.length === 0) {
+      showError("Failed to get text from page");
+      return;
+    }
+
+    const data = results[0].result;
     if (!data || !data.text) {
-      document.getElementById("options").innerHTML = "<i>No text selected or focused</i>";
+      const container = document.getElementById("options");
+      container.textContent = "No text selected or focused";
       return;
     }
     renderOptions(data.text, data.isEditable);
   });
 });
+
+function showError(message) {
+  const container = document.getElementById("options");
+  container.textContent = message;
+  container.style.color = "#d32f2f";
+}
 
 function getSelectedTextAndContext() {
   const selection = window.getSelection();
