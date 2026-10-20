@@ -1,19 +1,21 @@
 const transformations = [
-  // { name: "Uppercase",      fn: s => s.toUpperCase() },
-  // { name: "Lowercase",      fn: s => s.toLowerCase() },
-  { name: "Fix UTF-8",      fn: s => fix(s, 'utf-8') },
-  { name: "Fix GBK",        fn: s => fix(s, 'gbk') },
-  { name: "Fix Big5",       fn: s => fix(s, 'big5') },
-  { name: "Fix Shift-Jis",       fn: s => fix(s, 'shift-js') },
-  { name: "Fix Euc-Kr",       fn: s => fix(s, 'enc-kr') },
+  { name: "Fix UTF-8", encoding: 'utf-8', fn: s => fix(s, 'utf-8') },
+  { name: "Fix GBK", encoding: 'gbk', fn: s => fix(s, 'gbk') },
+  { name: "Fix Big5", encoding: 'big5', fn: s => fix(s, 'big5') },
+  { name: "Fix Shift_JIS", encoding: 'shift_jis', fn: s => fix(s, 'shift_jis') },
+  { name: "Fix EUC-KR", encoding: 'euc-kr', fn: s => fix(s, 'euc-kr') },
   // Add more here easily!
 ];
 
+function supportsEncoding(enc) {
+  try { new TextDecoder(enc); return true; } catch (e) { return false; }
+}
+
 function fix(str, encoding) {
   try {
-    const latin1Bytes = Array.from(str).map(c => c.charCodeAt(0));
-    const utf8String = new TextDecoder(encoding).decode(new Uint8Array(latin1Bytes));
-    return utf8String;
+    const latin1Bytes = Array.from(str).map(c => c.charCodeAt(0) & 0xff);
+    const dec = supportsEncoding(encoding) ? new TextDecoder(encoding) : new TextDecoder('utf-8');
+    return dec.decode(new Uint8Array(latin1Bytes));
   } catch (e) {
     return "Error decoding";
   }
@@ -76,15 +78,22 @@ function renderOptions(originalText, isEditable) {
   }
 
   transformations.forEach((t) => {
+    if (!supportsEncoding(t.encoding)) return; // skip unsupported
     const transformed = t.fn(originalText) || "(empty)";
     const div = document.createElement("div");
     div.className = "option";
     if (!isEditable) div.style.opacity = "0.85";
 
-    div.innerHTML = `
-      <span class="label">${t.name}:</span>
-      <span class="preview">${escapeHtml(transformed)}</span>
-    `;
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = t.name + ':';
+
+    const previewEl = document.createElement('span');
+    previewEl.className = 'preview';
+    previewEl.textContent = transformed;
+
+    div.appendChild(labelEl);
+    div.appendChild(previewEl);
 
     if (isEditable) {
       div.style.cursor = "pointer";
