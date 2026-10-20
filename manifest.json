@@ -3,25 +3,22 @@
   "name": "Fix broken CJK or other mojibake",
   "version": "0.1",
   "description": "See all transformations and pick the one you want",
-
   "icons": {
-    "960": "icon.jpg"
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
   },
-
   "action": {
     "default_popup": "popup.html",
     "default_title": "Fix mojibake/garbled text"
   },
-
   "background": {
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
-
   "permissions": [
     "activeTab",
     "scripting"
   ],
-
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -31,7 +28,6 @@
       "description": "Open Mojibake Fixer Preview"
     }
   },
-
   "browser_specific_settings": {
     "gecko": {
       "id": "mojibake-fixer-void.foo@example.com",
